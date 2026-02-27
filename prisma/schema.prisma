@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Direction {
+  UP
+  DOWN
+  NO_BET
+}
+
+model Prediction {
+  id            String    @id @default(uuid())
+  symbol        String
+  timestamp     DateTime  @default(now())
+  currentPrice  Float?    @map("current_price")
+  marketSlug    String    @map("market_slug")
+  question      String
+  outcomes      Json
+  outcomePrices Json      @map("outcome_prices")
+  direction     Direction
+  sizeUsd       Float     @map("size_usd")
+  maxLossUsd    Float     @map("max_loss_usd")
+  edgeProb      Float     @map("edge_prob")
+  reasoning     String
+  clobTokenIds  Json?     @map("clob_token_ids")
+
+  @@map("predictions")
+}
