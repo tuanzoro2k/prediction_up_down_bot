@@ -7,7 +7,7 @@ async function settlePendingBets() {
     where: { status: 'PENDING' },
     include: { prediction: true },
   });
-
+  
   if (pendingBets.length === 0) return;
 
   const slugGroups = new Map<string, typeof pendingBets>();
@@ -38,24 +38,37 @@ async function settlePendingBets() {
         const won = bet.direction === winningDirection;
         const pnl = won ? bet.potentialPayout - bet.amount : -bet.amount;
 
-        await prisma.$transaction([
-          prisma.virtualBet.update({
-            where: { id: bet.id },
+        await prisma.$transaction(async (tx) => {
+          // Chỉ settle khi bet vẫn đang PENDING để tránh double-settlement
+          const { count } = await tx.virtualBet.updateMany({
+            where: { id: bet.id, status: 'PENDING' },
             data: {
               status: won ? 'WON' : 'LOST',
               pnl,
               settledAt: new Date(),
             },
-          }),
-          ...(won
-            ? [
-                prisma.user.update({
-                  where: { id: bet.userId },
-                  data: { balance: { increment: bet.potentialPayout } },
-                }),
-              ]
-            : []),
-        ]);
+          });
+
+          if (count === 0) {
+            // Bet đã được settle ở transaction khác
+            console.log(`[settlement] Bet ${bet.id} already settled elsewhere; skipping balance update`);
+            return;
+          }
+
+          if (won) {
+            const updatedUser = await tx.user.update({
+              where: { id: bet.userId },
+              data: { balance: { increment: bet.potentialPayout } },
+              select: { id: true, balance: true },
+            });
+
+            console.log(
+              `[balance] User ${updatedUser.id} credited $${bet.potentialPayout.toFixed(
+                2,
+              )} from bet ${bet.id}. New balance: $${updatedUser.balance.toFixed(2)}`,
+            );
+          }
+        });
 
         console.log(
           `[settlement] Bet ${bet.id}: ${won ? 'WON' : 'LOST'} | PnL: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`,

@@ -57,6 +57,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshProfile]);
 
+  // Keep wallet/header balance in sync with server-side updates (e.g. settlement cron).
+  useEffect(() => {
+    if (!user) return;
+    const id = setInterval(() => {
+      refreshProfile();
+    }, 15_000);
+    return () => clearInterval(id);
+  }, [user, refreshProfile]);
+
   const connect = useCallback(async () => {
     if (!window.ethereum) {
       setError('MetaMask not found. Please install MetaMask extension.');

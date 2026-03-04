@@ -152,6 +152,7 @@ app.get('/api/user/profile', authMiddleware, async (req, res) => {
 
 app.post('/api/virtual-bet', authMiddleware, async (req, res) => {
   try {
+    console.log('Virtual bet request received');
     const { predictionId, direction, amount } = req.body as {
       predictionId?: string;
       direction?: 'UP' | 'DOWN';
@@ -191,8 +192,22 @@ app.post('/api/virtual-bet', authMiddleware, async (req, res) => {
     const outcomePrice = prices[dirIndex] ?? 0.5;
     const potentialPayout = amount / outcomePrice;
 
-    const [bet] = await prisma.$transaction([
-      prisma.virtualBet.create({
+    const { bet, balance } = await prisma.$transaction(async (tx) => {
+      const { count } = await tx.user.updateMany({
+        where: {
+          id: user.id,
+          balance: { gte: amount },
+        },
+        data: {
+          balance: { decrement: amount },
+        },
+      });
+
+      if (count === 0) {
+        throw new Error('INSUFFICIENT_BALANCE');
+      }
+
+      const createdBet = await tx.virtualBet.create({
         data: {
           userId: user.id,
           predictionId,
@@ -202,12 +217,26 @@ app.post('/api/virtual-bet', authMiddleware, async (req, res) => {
           outcomePrice,
           potentialPayout,
         },
-      }),
-      prisma.user.update({
+      });
+
+      const updatedUser = await tx.user.findUnique({
         where: { id: user.id },
-        data: { balance: { decrement: amount } },
-      }),
-    ]);
+        select: { balance: true },
+      });
+
+      if (updatedUser) {
+        console.log(
+          `[balance] User ${user.id} debited $${amount.toFixed(
+            2,
+          )} for virtual bet ${createdBet.id}. New balance: $${updatedUser.balance.toFixed(2)}`,
+        );
+      }
+
+      return {
+        bet: createdBet,
+        balance: updatedUser!.balance,
+      };
+    });
 
     res.json({
       id: bet.id,
@@ -217,10 +246,18 @@ app.post('/api/virtual-bet', authMiddleware, async (req, res) => {
       outcomePrice: bet.outcomePrice,
       potentialPayout: Math.round(bet.potentialPayout * 100) / 100,
       status: bet.status,
-      balance: Math.round((user.balance - amount) * 100) / 100,
+      balance: Math.round(balance * 100) / 100,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+
+    if (message === 'INSUFFICIENT_BALANCE') {
+      res.status(400).json({
+        error: `Insufficient balance for bet amount $${(req.body?.amount as number | undefined)?.toFixed?.(2) ?? ''}`,
+      });
+      return;
+    }
+
     console.error('[virtual-bet] failed:', message);
     res.status(500).json({ error: message });
   }

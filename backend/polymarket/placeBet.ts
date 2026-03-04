@@ -8,17 +8,17 @@
  * This follows the official quickstart:
  * https://docs.polymarket.com/quickstart/first-order
  */
-const { ClobClient, Side, OrderType } = require("@polymarket/clob-client");
-const { Wallet } = require("ethers");
+import { ClobClient, Side, OrderType } from '@polymarket/clob-client';
+import { Wallet } from 'ethers';
 
-const CLOB_HOST = "https://clob.polymarket.com";
+const CLOB_HOST = 'https://clob.polymarket.com';
 const POLYGON_CHAIN_ID = 137; // Polygon mainnet
 
 export interface PlaceBetParams {
-  tokenId: string;          // CLOB token id for the outcome (from Gamma API: clobTokenIds)
-  price: number;            // Price per share, e.g. 0.55
-  size: number;             // Number of shares, e.g. 10
-  side: "BUY" | "SELL";     // BUY or SELL
+  tokenId: string; // CLOB token id for the outcome (from Gamma API: clobTokenIds)
+  price: number; // Price per share, e.g. 0.55
+  size: number; // Number of shares, e.g. 10
+  side: 'BUY' | 'SELL'; // BUY or SELL
 }
 
 /**
@@ -29,36 +29,30 @@ export interface PlaceBetParams {
 export async function placePolymarketBet(params: PlaceBetParams) {
   const privateKey = process.env.PRIVATE_KEY;
   if (!privateKey) {
-    throw new Error("Missing PRIVATE_KEY in environment");
+    throw new Error('Missing PRIVATE_KEY in environment');
   }
 
-  // Step 1: Initialize signer and base client
   const signer = new Wallet(privateKey);
-
-  const baseClient = new ClobClient(CLOB_HOST, POLYGON_CHAIN_ID, signer);
-
-  // Step 2: Derive or fetch user API credentials (L2 auth)
+  // ClobClient may expect ethers v5 Wallet; ethers v6 Wallet is compatible at runtime
+  const signerForClob = signer as unknown as ConstructorParameters<typeof ClobClient>[2];
+  const baseClient = new ClobClient(CLOB_HOST, POLYGON_CHAIN_ID, signerForClob);
   const userApiCreds = await baseClient.createOrDeriveApiKey();
 
-  // Step 3: Re-initialize fully authenticated client (EOA example)
-  const SIGNATURE_TYPE = 0;            // 0 = EOA (you pay gas, use your own wallet)
+  const SIGNATURE_TYPE = 0; // 0 = EOA (you pay gas, use your own wallet)
   const FUNDER_ADDRESS = signer.address;
 
   const client = new ClobClient(
     CLOB_HOST,
     POLYGON_CHAIN_ID,
-    signer,
+    signerForClob,
     userApiCreds,
     SIGNATURE_TYPE,
     FUNDER_ADDRESS
   );
 
-  // Get market info for this token (tick size, negRisk flag, etc)
   const market = await client.getMarket(params.tokenId);
+  const sideEnum = params.side === 'BUY' ? Side.BUY : Side.SELL;
 
-  const sideEnum = params.side === "BUY" ? Side.BUY : Side.SELL;
-
-  // Step 5: Place the order
   const response = await client.createAndPostOrder(
     {
       tokenID: params.tokenId,
@@ -75,4 +69,3 @@ export async function placePolymarketBet(params: PlaceBetParams) {
 
   return response;
 }
-

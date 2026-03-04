@@ -21,6 +21,7 @@ function getIndicatorsByIds(ids: string[]): IndicatorDefinition[] {
 
 import { buildPolymarketUpDownPrompt, buildTools } from './prompts.js';
 import { delay, roundOrNull, roundSeries } from '../lib/utils/utils.js';
+import { getChainlinkUsdPrice } from './priceFeed.js';
 
 /** Tool call + chat types (from decisionMaker.ts pattern) */
 interface ChatMessage {
@@ -195,8 +196,8 @@ export class PolymarketUpDownAgent {
         respJson = await this.callLLM(payload);
       } catch (error) {
         const axiosError = error as AxiosError<OpenRouterResponse>;
-        if (axiosError.response) {
-          console.log(axiosError.response.data)
+        if (axiosError.response?.data) {
+          console.error('[prediction] LLM API error response:', axiosError.response.data);
         }
         throw error;
       }
@@ -355,14 +356,12 @@ private async fetchAssetMarketData(
   intradayDefs: IndicatorDefinition[],
   longTermDefs: IndicatorDefinition[]
 ): Promise<MarketSection> {
-  const symbol = `${asset}/USDT`;
 
   const [intradayData, longTermData, currentPrice] = await Promise.all([
     this.fetchIndicatorsByDefs(asset, intradayTimeframe, seriesResults, intradayDefs),
     this.fetchIndicatorsByDefs(asset, longTermTimeframe, seriesResults, longTermDefs),
-    this.taapi.fetchValue('price', symbol, intradayTimeframe, {}, 'value'),
-  ]);
-
+    getChainlinkUsdPrice(asset)
+    ]);
   return {
     asset,
     current_price: currentPrice,
@@ -387,7 +386,6 @@ private async fetchIndicatorsByDefs(
   for (const def of defs) {
     await delay(1000);
     if (def.multiValueKeys?.length) {
-      console.log(def.taapiIndicator, symbol, timeframe, seriesResults, def.params as Record<string, unknown>)
       const data = await this.taapi.getHistoricalData(
         def.taapiIndicator,
         symbol,

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getVirtualBets, getBetSummary } from '../api/prediction';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +9,8 @@ const STATUS_BADGE = {
   LOST: 'bg-red-500/15 text-red-400',
   CANCELLED: 'bg-gray-500/15 text-gray-400',
 } as const;
+
+const PAGE_SIZE = 10;
 
 export default function Portfolio() {
   const { user } = useAuth();
@@ -25,6 +28,19 @@ export default function Portfolio() {
     enabled: !!user,
     refetchInterval: 15_000,
   });
+
+  const [page, setPage] = useState(1);
+
+  const totalBets = bets?.length ?? 0;
+  const totalPages = totalBets > 0 ? Math.ceil(totalBets / PAGE_SIZE) : 1;
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE;
+  const visibleBets = bets ? bets.slice(startIndex, endIndex) : [];
+
+  useEffect(() => {
+    setPage(1);
+  }, [totalBets]);
 
   if (!user) return null;
 
@@ -84,7 +100,7 @@ export default function Portfolio() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800/40">
-                {bets.map((bet) => (
+                {visibleBets.map((bet) => (
                   <tr key={bet.id} className="hover:bg-gray-800/20 transition-colors">
                     <td className="px-4 py-3 text-gray-400 font-mono text-xs whitespace-nowrap">
                       {new Date(bet.createdAt).toLocaleString(undefined, {
@@ -141,6 +157,36 @@ export default function Portfolio() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="flex items-center justify-between px-4 py-2 border-t border-gray-800 bg-gray-900/60 text-xs text-gray-400">
+            <div>
+              Showing{' '}
+              <span className="font-mono text-gray-200">
+                {totalBets === 0 ? 0 : startIndex + 1}-{totalBets === 0 ? 0 : Math.min(endIndex, totalBets)}
+              </span>{' '}
+              of <span className="font-mono text-gray-200">{totalBets}</span> bets
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="px-2 py-1 rounded border border-gray-700 bg-gray-900/80 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-800/80 transition-colors"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+              >
+                Prev
+              </button>
+              <span className="font-mono">
+                Page {currentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                className="px-2 py-1 rounded border border-gray-700 bg-gray-900/80 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-800/80 transition-colors"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages || totalBets === 0}
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       )}

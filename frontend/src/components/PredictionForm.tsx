@@ -9,7 +9,7 @@ interface Props {
   disabled?: boolean;
 }
 
-const POPULAR_SYMBOLS = ['BTC', 'ETH', 'SOL', 'XRP'];
+const POPULAR_SYMBOLS = ['BTC', 'ETH', 'SOL'];
 
 export default function PredictionForm({ onSubmit, isLoading, isAuto, onAutoToggle, countdown, disabled }: Props) {
   const [symbol, setSymbol] = useState('');

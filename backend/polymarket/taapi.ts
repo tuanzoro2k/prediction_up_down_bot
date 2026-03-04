@@ -15,7 +15,7 @@ export class TaapiClientService {
     symbol: string,
     interval: string,
     results = 10,
-    params: Record<string, any> = {},
+    params: Record<string, unknown> = {},
     valueKey = 'value'
   ): Promise<number[]> {
     try {
@@ -27,7 +27,9 @@ export class TaapiClientService {
       }
       return [];
     } catch (error) {
-      console.log(error)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[taapi] fetchSeries error:', error instanceof Error ? error.message : error);
+      }
       return [];
     }
   }
@@ -36,7 +38,7 @@ export class TaapiClientService {
     indicator: string,
     symbol: string,
     interval: string,
-    params: Record<string, any> = {},
+    params: Record<string, unknown> = {},
     key = 'value'
   ): Promise<number | null> {
     try {
@@ -90,7 +92,7 @@ export class TaapiClientService {
     symbol: string,
     interval: string,
     results: number,
-    params: Record<string, any>
+    params: Record<string, unknown>
   ) {
     const response = await retry(() =>
       axios.get(`${this.baseUrl}${indicator}`, {
