@@ -55,6 +55,7 @@ interface BtcMarketData {
   slug: string;
   outcomes: MarketOutcome[];
   clobTokenIds: string[];
+  closed: boolean;
 }
 
 /**
@@ -106,6 +107,7 @@ export async function fetchBtcUpDownMarkets(options?: {
         slug: event.slug ?? slug ?? "",
         outcomes,
         clobTokenIds: market.clobTokenIds ?? [],
+        closed: !!event.closed,
       });
     }
   }

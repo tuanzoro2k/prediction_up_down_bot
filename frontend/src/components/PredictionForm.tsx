@@ -6,26 +6,28 @@ interface Props {
   isAuto: boolean;
   onAutoToggle: (symbol: string | null) => void;
   countdown: number;
+  disabled?: boolean;
 }
 
 const POPULAR_SYMBOLS = ['BTC', 'ETH', 'SOL', 'XRP'];
 
-export default function PredictionForm({ onSubmit, isLoading, isAuto, onAutoToggle, countdown }: Props) {
+export default function PredictionForm({ onSubmit, isLoading, isAuto, onAutoToggle, countdown, disabled }: Props) {
   const [symbol, setSymbol] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isAuto) return;
+    if (isAuto || disabled) return;
     const trimmed = symbol.trim().toUpperCase();
     if (trimmed) onSubmit(trimmed);
   };
 
   const handleQuickPick = (s: string) => {
-    if (isAuto) return;
+    if (isAuto || disabled) return;
     setSymbol(s);
   };
 
   const handleAutoClick = () => {
+    if (disabled) return;
     if (isAuto) {
       onAutoToggle(null);
     } else {
@@ -42,14 +44,14 @@ export default function PredictionForm({ onSubmit, isLoading, isAuto, onAutoTogg
           value={symbol}
           onChange={(e) => setSymbol(e.target.value.toUpperCase())}
           placeholder="Enter token symbol (e.g. BTC)"
-          disabled={isLoading || isAuto}
+          disabled={isLoading || isAuto || disabled}
           className="flex-1 rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-sm
                      placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500
                      focus:border-transparent disabled:opacity-50 transition"
         />
         <button
           type="submit"
-          disabled={isLoading || isAuto || !symbol.trim()}
+          disabled={isLoading || isAuto || disabled || !symbol.trim()}
           className="rounded-lg bg-indigo-600 px-6 py-3 text-sm font-medium
                      hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed
                      transition flex items-center gap-2"
@@ -66,7 +68,7 @@ export default function PredictionForm({ onSubmit, isLoading, isAuto, onAutoTogg
         <button
           type="button"
           onClick={handleAutoClick}
-          disabled={!isAuto && !symbol.trim()}
+          disabled={disabled || (!isAuto && !symbol.trim())}
           className={`rounded-lg px-5 py-3 text-sm font-medium transition flex items-center gap-2
                      ${isAuto
                        ? 'bg-red-600 hover:bg-red-500 text-white'
@@ -101,7 +103,7 @@ export default function PredictionForm({ onSubmit, isLoading, isAuto, onAutoTogg
           <button
             key={s}
             type="button"
-            disabled={isLoading || isAuto}
+            disabled={isLoading || isAuto || disabled}
             onClick={() => handleQuickPick(s)}
             className="rounded-md border border-gray-700 bg-gray-800/50 px-3 py-1.5 text-xs
                        text-gray-300 hover:bg-gray-700 hover:text-white disabled:opacity-40

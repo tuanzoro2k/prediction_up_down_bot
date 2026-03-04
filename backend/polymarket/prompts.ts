@@ -348,6 +348,16 @@ export function buildPolymarketUpDownPrompt(
   - Compare Polymarket implied probabilities (prices) vs. your best directional view.
   - Be explicit about why the market might be mispriced, or why it is likely fair.
   
+  CRITICAL rule for "edge_prob":
+  - "edge_prob" is your CONFIDENCE (0.5–1.0) that YOUR CHOSEN direction is correct.
+  - It is NOT the raw probability of the outcome. It is how confident you are in your bet.
+  - edge_prob = 0.5 means coin-flip (no edge) → you MUST choose NO_BET.
+  - edge_prob = 0.7 means you are 70% confident your chosen side wins.
+  - edge_prob MUST ALWAYS be >= 0.5. If you think the true probability of your side is below 50%, you should choose NO_BET.
+  - Example: market says Down = 3.5%. You estimate Down = 10%. You pick DOWN.
+    Your edge_prob should be how confident you are that DOWN is correct → perhaps 0.55 (slightly confident), NOT 0.10.
+  - If direction is NO_BET, set edge_prob to 0.5.
+
   Output contract (STRICT):
   - Return a JSON object with exactly:
     {
@@ -357,7 +367,7 @@ export function buildPolymarketUpDownPrompt(
         "direction": "UP" | "DOWN" | "NO_BET",
         "size_usd": number,             // bet size in USD (0 allowed when NO_BET)
         "max_loss_usd": number,         // worst-case loss if the bet resolves against you
-        "edge_prob": number             // your estimated probability (0–1) that your chosen side is correct
+        "edge_prob": number             // CONFIDENCE that your chosen side wins (0.5–1.0, NEVER below 0.5)
       }
     }
   - Do NOT emit Markdown, text outside JSON, or extra fields.`;

@@ -124,10 +124,10 @@ function buildUpDownOutputSchema() {
           },
           edge_prob: {
             type: 'number',
-            minimum: 0,
+            minimum: 0.5,
             maximum: 1,
             description:
-              "Model's estimated probability (0–1) that the chosen side is correct",
+              "Confidence (0.5–1.0) that the chosen direction wins. 0.5 = no edge (use with NO_BET). NEVER below 0.5.",
           },
         },
         required: ['market_slug', 'direction', 'size_usd', 'max_loss_usd', 'edge_prob'],
@@ -263,12 +263,22 @@ export class PolymarketUpDownAgent {
       throw new Error("Missing or invalid 'decision' field in LLM output");
     }
 
+    let direction = (decisionRaw.direction as UpDownDirection) || 'NO_BET';
+    let edgeProb = Number(decisionRaw.edge_prob) || 0.5;
+    let sizeUsd = Number(decisionRaw.size_usd) || 0;
+
+    if (edgeProb < 0.5 && direction !== 'NO_BET') {
+      direction = 'NO_BET';
+      sizeUsd = 0;
+      edgeProb = 0.5;
+    }
+
     const decision: UpDownDecision = {
       market_slug: String(decisionRaw.market_slug || defaultSlug),
-      direction: (decisionRaw.direction as UpDownDirection) || 'NO_BET',
-      size_usd: Number(decisionRaw.size_usd) || 0,
-      max_loss_usd: Number(decisionRaw.max_loss_usd) || 0,
-      edge_prob: Number(decisionRaw.edge_prob) || 0.5,
+      direction,
+      size_usd: sizeUsd,
+      max_loss_usd: direction === 'NO_BET' ? 0 : Number(decisionRaw.max_loss_usd) || 0,
+      edge_prob: edgeProb,
     };
 
     return { reasoning, decision };

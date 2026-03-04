@@ -1,19 +1,31 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchPrediction } from './api/prediction';
+import { fetchPrediction, placeVirtualBet } from './api/prediction';
+import { useAuth } from './context/AuthContext';
 import type { PredictionResponse } from './types';
 import Layout from './components/Layout';
 import PredictionForm from './components/PredictionForm';
 import PredictionCard from './components/PredictionCard';
 import PredictionHistory from './components/PredictionHistory';
 import AutoStatus from './components/AutoStatus';
+import Portfolio from './components/Portfolio';
 
 const AUTO_INTERVAL_MS = 60_000;
 
+export interface AutoBetLog {
+  direction: string;
+  amount: number;
+  success: boolean;
+  message: string;
+  timestamp: number;
+}
+
 export default function App() {
   const queryClient = useQueryClient();
-  const [lastResult, setLastResult] = useState<PredictionResponse | null>(null);
+  const { user, profile, refreshProfile } = useAuth();
+  const [lastResult, setLastResult] = useState<(PredictionResponse & { id?: string }) | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastAutoBet, setLastAutoBet] = useState<AutoBetLog | null>(null);
 
   const [autoSymbol, setAutoSymbol] = useState<string | null>(null);
   const [autoCount, setAutoCount] = useState(0);
@@ -21,14 +33,82 @@ export default function App() {
   const autoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isPendingRef = useRef(false);
+  const autoSymbolRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    autoSymbolRef.current = autoSymbol;
+  }, [autoSymbol]);
+
+  const tryAutoBet = useCallback(
+    async (data: PredictionResponse & { id?: string }) => {
+      if (!autoSymbolRef.current || !user) return;
+
+      const { direction, size_usd } = data.prediction;
+      const predictionId = data.id;
+
+      if (!predictionId || direction === 'NO_BET') {
+        setLastAutoBet({
+          direction,
+          amount: 0,
+          success: false,
+          message: direction === 'NO_BET' ? 'AI chose NO_BET — skipped' : 'Missing prediction ID',
+          timestamp: Date.now(),
+        });
+        return;
+      }
+
+      const balance = profile?.balance ?? user.balance;
+      if (balance < size_usd) {
+        setLastAutoBet({
+          direction,
+          amount: size_usd,
+          success: false,
+          message: `Insufficient balance ($${balance.toFixed(2)} < $${size_usd})`,
+          timestamp: Date.now(),
+        });
+        return;
+      }
+
+      try {
+        const result = await placeVirtualBet({
+          predictionId,
+          direction: direction as 'UP' | 'DOWN',
+          amount: size_usd,
+        });
+        setLastAutoBet({
+          direction,
+          amount: size_usd,
+          success: true,
+          message: `${direction} $${size_usd} — payout $${result.potentialPayout.toFixed(2)}`,
+          timestamp: Date.now(),
+        });
+        refreshProfile();
+        queryClient.invalidateQueries({ queryKey: ['virtual-bets'] });
+        queryClient.invalidateQueries({ queryKey: ['bet-summary'] });
+      } catch (err) {
+        setLastAutoBet({
+          direction,
+          amount: size_usd,
+          success: false,
+          message: err instanceof Error ? err.message : 'Bet failed',
+          timestamp: Date.now(),
+        });
+      }
+    },
+    [user, profile, refreshProfile, queryClient],
+  );
 
   const mutation = useMutation({
     mutationFn: fetchPrediction,
     onSuccess: (data) => {
-      setLastResult(data);
+      const result = data as PredictionResponse & { id?: string };
+      setLastResult(result);
       setError(null);
       queryClient.invalidateQueries({ queryKey: ['prediction-history'] });
-      if (autoSymbol) setAutoCount((c) => c + 1);
+      if (autoSymbolRef.current) {
+        setAutoCount((c) => c + 1);
+        tryAutoBet(result);
+      }
     },
     onError: (err: Error) => {
       setError(err.message);
@@ -68,6 +148,7 @@ export default function App() {
     setAutoSymbol(null);
     setAutoCount(0);
     setCountdown(0);
+    setLastAutoBet(null);
   }, []);
 
   const startAuto = useCallback(
@@ -94,11 +175,12 @@ export default function App() {
   }, []);
 
   const handlePredict = (symbol: string) => {
-    if (autoSymbol) return;
+    if (autoSymbol || !user) return;
     runPredict(symbol);
   };
 
   const handleAutoToggle = (symbol: string | null) => {
+    if (!user) return;
     if (symbol) {
       startAuto(symbol);
     } else {
@@ -117,7 +199,14 @@ export default function App() {
           isAuto={isAutoRunning}
           onAutoToggle={handleAutoToggle}
           countdown={countdown}
+          disabled={!user}
         />
+
+        {!user && (
+          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-400 text-center">
+            Connect your wallet to start making predictions
+          </div>
+        )}
 
         {isAutoRunning && (
           <AutoStatus
@@ -125,6 +214,7 @@ export default function App() {
             countdown={countdown}
             predictCount={autoCount}
             isLoading={mutation.isPending}
+            lastAutoBet={lastAutoBet}
           />
         )}
 
@@ -148,6 +238,8 @@ export default function App() {
           <PredictionCard data={lastResult} />
         )}
       </section>
+
+      <Portfolio />
 
       <PredictionHistory />
     </Layout>

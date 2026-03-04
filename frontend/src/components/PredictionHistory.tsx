@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchPredictionHistory } from '../api/prediction';
+import { useAuth } from '../context/AuthContext';
 import type { PredictionHistoryEntry } from '../types';
 
 const DIR_BADGE = {
@@ -57,10 +58,13 @@ function formatSlugShort(slug: string): string {
 const PAGE_SIZE = 10;
 
 export default function PredictionHistory() {
+  const { user } = useAuth();
+
   const { data: history, isLoading } = useQuery({
-    queryKey: ['prediction-history'],
+    queryKey: ['prediction-history', user?.id],
     queryFn: fetchPredictionHistory,
     refetchInterval: 15_000,
+    enabled: !!user,
   });
 
   const groups = useMemo(
@@ -92,6 +96,14 @@ export default function PredictionHistory() {
   if (isLoading) {
     return (
       <div className="text-center text-gray-500 py-8 text-sm">Loading history...</div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="text-center text-gray-500 py-8 text-sm">
+        Connect your wallet to see your prediction history.
+      </div>
     );
   }
 
