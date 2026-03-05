@@ -73,7 +73,7 @@ The repository is split into three main parts (directory names may be simplified
 
 For detailed architecture and flows, see:
 
-- `docs/prediction-bot-architecture-workflow-mermaid.md`
+- [`docs/prediction-bot-architecture-workflow-mermaid.md`](#docs/prediction-bot-architecture-workflow-mermaid.md)
 
 ---
 
@@ -83,7 +83,7 @@ For detailed architecture and flows, see:
 
 The overall architecture is documented with mermaid diagrams in:
 
-- `docs/prediction-bot-architecture-workflow-mermaid.md` – section **1. System Architecture**
+- [`docs/prediction-bot-architecture-workflow-mermaid.md`](#docs/prediction-bot-architecture-workflow-mermaid.md) – section **1. System Architecture**
 
 In summary:
 
@@ -123,7 +123,7 @@ In summary:
 
 ### 3.2. Main flows
 
-Flows are described in detail in `docs/prediction-bot-architecture-workflow-mermaid.md` with sequence diagrams:
+Flows are described in detail in [`docs/prediction-bot-architecture-workflow-mermaid.md`](#docs/prediction-bot-architecture-workflow-mermaid.md) with sequence diagrams:
 
 - **Flow: Predict (fetch UP/DOWN prediction)** 
   - Frontend calls `GET /api/predict?symbol=BTC` (with Bearer JWT).
@@ -158,7 +158,7 @@ To run this project you’ll need:
 If you follow the Docker-based deployment guide, your VPS should run:
 
 - Ubuntu 22.04+ or Debian 12+
-- Docker + Docker Compose v2 (see `DEPLOY.md`)
+- Docker + Docker Compose v2 (see [`DEPLOY.md`](#DEPLOY.md))
 
 ---
 
@@ -229,7 +229,7 @@ The frontend runs at `http://localhost:5173` by default (or whichever port Vite 
 
 For production-style deployment (VPS + domain + HTTPS), see:
 
-- `DEPLOY.md` – **Deploy Prediction Bot to VPS**
+- [`DEPLOY.md`](#DEPLOY.md) – **Deploy Prediction Bot to VPS**
 
 It covers:
 
@@ -260,7 +260,7 @@ Exact names differ by `.env` file, but commonly include:
 See also:
 
 - `.env.example` (if present)
-+- `.env.production` as described in `DEPLOY.md`
++- `.env.production` as described in [`DEPLOY.md`](#DEPLOY.md)
 
 ---
 
@@ -301,8 +301,8 @@ Implementation details live under `backend/`; check the code there for the exact
 ## 9. About & Resources
 
 - **Project:** `prediction-bot` – AI-powered prediction bot for Polymarket UP/DOWN markets.
-- **Architecture details:** see `docs/prediction-bot-architecture-workflow-mermaid.md`.
-- **Deployment guide:** see `DEPLOY.md`.
+- **Architecture details:** see [`docs/prediction-bot-architecture-workflow-mermaid.md`](#docs/prediction-bot-architecture-workflow-mermaid.md).
+- **Deployment guide:** see [`DEPLOY.md`](#DEPLOY.md).
 
 ---
 

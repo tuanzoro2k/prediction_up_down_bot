@@ -21,7 +21,6 @@ function getIndicatorsByIds(ids: string[]): IndicatorDefinition[] {
 
 import { buildPolymarketUpDownPrompt, buildTools } from './prompts.js';
 import { delay, roundOrNull, roundSeries } from '../lib/utils/utils.js';
-import { getChainlinkUsdPrice } from './priceFeed.js';
 
 /** Tool call + chat types (from decisionMaker.ts pattern) */
 interface ChatMessage {
@@ -357,11 +356,14 @@ private async fetchAssetMarketData(
   longTermDefs: IndicatorDefinition[]
 ): Promise<MarketSection> {
 
+  const symbol = `${asset}/USDT`;
+
   const [intradayData, longTermData, currentPrice] = await Promise.all([
     this.fetchIndicatorsByDefs(asset, intradayTimeframe, seriesResults, intradayDefs),
     this.fetchIndicatorsByDefs(asset, longTermTimeframe, seriesResults, longTermDefs),
-    getChainlinkUsdPrice(asset)
-    ]);
+    this.taapi.fetchValue('price', symbol, intradayTimeframe, {}, 'value'),
+  ]);
+
   return {
     asset,
     current_price: currentPrice,
