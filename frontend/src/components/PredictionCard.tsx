@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { placeVirtualBet } from '../api/prediction';
 import { useAuth } from '../context/AuthContext';
 import type { PredictionResponse } from '../types';
+
+const SESSION_DURATION_SEC = 900; // 15 min
 
 const DIRECTION_STYLES = {
   UP: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-400', label: 'UP' },
@@ -24,6 +26,28 @@ export default function PredictionCard({ data }: { data: PredictionResponse & { 
   const [betAmount, setBetAmount] = useState('');
   const [betSuccess, setBetSuccess] = useState<string | null>(null);
   const [betError, setBetError] = useState<string | null>(null);
+  const [sessionCountdown, setSessionCountdown] = useState<number | null>(null);
+
+  // Session end: from market_slug trailing timestamp (e.g. btc-updown-15m-1770690600) + 15 min, else timestamp + 15 min
+  const sessionEndMs = (() => {
+    const match = data.market.market_slug.match(/(\d+)$/);
+    if (match) {
+      const startSec = parseInt(match[1], 10);
+      return (startSec + SESSION_DURATION_SEC) * 1000;
+    }
+    return new Date(data.timestamp).getTime() + SESSION_DURATION_SEC * 1000;
+  })();
+
+  useEffect(() => {
+    const tick = () => {
+      const now = Date.now();
+      const remaining = Math.max(0, Math.floor((sessionEndMs - now) / 1000));
+      setSessionCountdown(remaining);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [sessionEndMs]);
 
   const upIndex = data.market.outcomes.findIndex((o) => o.toLowerCase() === 'up');
   const downIndex = data.market.outcomes.findIndex((o) => o.toLowerCase() === 'down');
@@ -74,14 +98,26 @@ export default function PredictionCard({ data }: { data: PredictionResponse & { 
           <span className={`text-3xl font-bold ${dir.text}`}>{dir.label}</span>
           <span className="rounded-md bg-gray-800 px-3 py-1 text-sm font-medium">{data.symbol}</span>
         </div>
-        {data.current_price != null && (
-          <div className="text-right">
-            <p className="text-xs text-gray-400">Current Price</p>
-            <p className="text-lg font-semibold font-mono">
-              ${data.current_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-        )}
+        <div className="flex items-center gap-6">
+          {data.current_price != null && (
+            <div className="text-right">
+              <p className="text-xs text-gray-400">Current Price</p>
+              <p className="text-lg font-semibold font-mono">
+                ${data.current_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          )}
+          {sessionCountdown !== null && (
+            <div className="text-right">
+              <p className="text-xs text-gray-400">Session ends</p>
+              <p className="text-lg font-semibold font-mono">
+                {sessionCountdown > 0
+                  ? `${String(Math.floor(sessionCountdown / 60)).padStart(2, '0')}:${String(sessionCountdown % 60).padStart(2, '0')}`
+                  : 'Ended'}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
