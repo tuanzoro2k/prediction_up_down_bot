@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getVirtualBets, getBetSummary } from '../api/prediction';
 import { useAuth } from '../context/AuthContext';
@@ -59,7 +59,7 @@ export default function Portfolio() {
             color="text-white"
           />
           <SummaryCard
-            label="Total P/L"
+            label="Total P&L"
             value={`${summary.totalPnl >= 0 ? '+' : ''}$${summary.totalPnl.toFixed(2)}`}
             color={summary.totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}
           />
@@ -70,7 +70,21 @@ export default function Portfolio() {
           />
           <SummaryCard
             label="Bets"
-            value={`${summary.wonBets}W / ${summary.lostBets}L / ${summary.pendingBets}P`}
+            value={
+              <span className="space-x-1">
+                <span className="text-emerald-400 font-semibold">
+                  {summary.wonBets} WIN
+                </span>
+                <span className="text-gray-500">/</span>
+                <span className="text-red-400 font-semibold">
+                  {summary.lostBets} LOST
+                </span>
+                <span className="text-gray-500">/</span>
+                <span className="text-yellow-400 font-semibold">
+                  {summary.pendingBets} PENDING
+                </span>
+              </span>
+            }
             color="text-gray-300"
           />
         </div>
@@ -96,7 +110,7 @@ export default function Portfolio() {
                   <th className="px-4 py-3 text-right">Edge</th>
                   <th className="px-4 py-3 text-right">Payout</th>
                   <th className="px-4 py-3 text-center">Status</th>
-                  <th className="px-4 py-3 text-right">P/L</th>
+                  <th className="px-4 py-3 text-right">P&L</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800/40">
@@ -200,7 +214,7 @@ function SummaryCard({
   color,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   color: string;
 }) {
   return (
