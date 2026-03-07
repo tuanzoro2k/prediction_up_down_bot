@@ -17,7 +17,7 @@ flowchart TB
     User -- request predict --> PredictAPI["Prediction API"]
     PredictAPI --> PredictionService["Prediction Service"]
     PredictionService -- make predict --> TradingEngine["Trading Engine"]
-    PredictionService --> CRE["CRE Workflow"] & DB & TAAPI["TAAPI API + Chainlink price feed"]
+    PredictionService --> CRE["CRE Workflow"] & DB & TAAPI["TAAPI API"]
     TAAPI --> PredictionService
     CRE -- HTTP request --> LLM["LLM Model"]
     LLM -- Returns out come + confidence --> CRE
@@ -37,7 +37,7 @@ sequenceDiagram
     participant MM as MetaMask
     participant API as API Server
     participant PS as Prediction Service
-    participant TA as TAAPI + Chainlink Price Feed
+    participant TA as TAAPI
     participant CRE as CRE Workflow
     participant LLM as LLM Model
     participant TE as Trading Engine
