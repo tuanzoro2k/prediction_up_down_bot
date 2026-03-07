@@ -14,7 +14,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               TP
             </div>
             <div>
-              <h1 className="text-lg font-semibold tracking-tight">AI Prediction (Powered Chainlink CRE)</h1>
+              <h1 className="text-lg font-semibold tracking-tight">AI Prediction (Powered by Chainlink CRE)</h1>
             </div>
           </div>
           <WalletConnect />
