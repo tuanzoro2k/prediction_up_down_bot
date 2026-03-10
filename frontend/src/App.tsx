@@ -234,9 +234,30 @@ export default function App() {
           </div>
         )}
 
-        {lastResult && (
-          <PredictionCard data={lastResult} />
-        )}
+        <PredictionCard
+          data={
+            lastResult ?? {
+              symbol: '',
+              timestamp: new Date().toISOString(),
+              market: {
+                market_slug: 'placeholder',
+                question: 'No prediction yet',
+                outcomes: ['UP', 'DOWN'],
+                outcomePrices: [0.5, 0.5],
+                clobTokenIds: [],
+              },
+              current_price: null,
+              prediction: {
+                market_slug: 'placeholder',
+                direction: 'NO_BET',
+                size_usd: 0,
+                max_loss_usd: 0,
+                edge_prob: 0.5,
+              },
+              reasoning: 'Run a prediction to see AI reasoning and live market data.',
+            }
+          }
+        />
       </section>
 
       <Portfolio />
